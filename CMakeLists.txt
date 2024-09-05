@@ -81,7 +81,7 @@ FetchContent_MakeAvailable(glad SDL2)
 # ----------------------
 
 project(
-	opengl_template
+	pong
 	VERSION 1.0
 	DESCRIPTION "Basic template for OpenGL development in C"
 	HOMEPAGE_URL "https://github.com/itsYakub/OpenGL-Template.git"
