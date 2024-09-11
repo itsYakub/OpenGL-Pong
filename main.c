@@ -1,4 +1,7 @@
 #include "SDL2/SDL.h"
+#include "SDL_events.h"
+#include "SDL_scancode.h"
+#include "SDL_video.h"
 #include "cglm/ivec2.h"
 #include "glad/glad.h"
 #include "cglm/cam.h"
@@ -51,6 +54,25 @@ typedef struct {
 	ivec2 size;
 } t_rect;
 
+typedef struct {
+	unsigned int key_state[SDL_NUM_SCANCODES];
+} t_input;
+
+typedef enum {
+	POSITION_LEFT = 0,
+	POSITION_RIGHT
+} t_player_pos;
+
+typedef struct {
+	t_rect rect;
+	int score;
+} t_player;
+
+typedef struct {
+	t_rect rect;
+	ivec2 direction;
+} t_ball;
+
 t_renderer pongRendererLoad(void);
 int pongRendererPrepare(t_renderer* renderer);
 int pongRendererDispatch(t_renderer* renderer);
@@ -60,7 +82,16 @@ int pongRendererUnload(t_renderer* renderer);
 
 int pongRectMove(t_rect* rect, ivec2 position);
 int pongRectResize(t_rect* rect, ivec2 size);
+int pongRectCheckCollision(t_rect a, t_rect b);
+int pongRectCheckCollisionBound(t_rect a, ivec2 bound);
 int pongRectRender(t_renderer* renderer, t_rect rect, vec4 color);
+
+int pongInputKeyDown(t_input* input, SDL_Scancode scancode);
+int pongInputKeyUp(t_input* input, SDL_Scancode scancode);
+
+t_player pongPlayerInit(t_player_pos ppos, ivec2 bounds);
+int pongPlayerUpdate(t_player* player, t_input* input, ivec2 bounds);
+int pongPlayerIncrementScore(t_player* player);
 
 int main(int argc, const char* argv[]) {
 	if(SDL_Init(SDL_INIT_EVERYTHING) != 0) {
@@ -75,9 +106,9 @@ int main(int argc, const char* argv[]) {
 		"Hello, OpenGL!",
 		SDL_WINDOWPOS_CENTERED,
 		SDL_WINDOWPOS_CENTERED,
-		800,
-		600,
-		SDL_WINDOW_OPENGL
+		1024,
+		768,
+		SDL_WINDOW_OPENGL | SDL_WINDOW_MOUSE_CAPTURE
 	);
 
 	SDL_GLContext context = SDL_GL_CreateContext(window);
@@ -87,36 +118,35 @@ int main(int argc, const char* argv[]) {
 	gladLoadGL();
 
 	t_renderer renderer = pongRendererLoad();
+	t_input input = { 0 };
+	int exit = 0;
+	ivec2 window_size;
+	mat4 matrix_projection;
+	SDL_GetWindowSize(window, &window_size[0], &window_size[1]);
 
-	t_rect p1 = {
-		{ 64, 64 },
-		{ 16, 128 }
-	};
-
-	t_rect p2 = {
-		{ 800 - 80, 64 },
-		{ 16, 128 }
-	};
+	t_player p1 = pongPlayerInit(POSITION_LEFT, window_size);
+	t_player p2 = pongPlayerInit(POSITION_RIGHT, window_size);
 
 	t_rect ball = {
-		{ 800 / 2 - 16 / 2, 600 / 2 - 16 / 2 },
+		{ window_size[0] / 2 - 16 / 2, window_size[1] / 2 - 16 / 2 },
 		{ 16, 16 }
 	};
 
 
-	mat4 matrix_projection;
-	glm_ortho(0.0f, 800.0f, 0.0f, 600.0f, -1.0f, 1.0f, matrix_projection);
-	glViewport(0, 0, 800, 600);
-
-	int exit = 0;
 	while(!exit) {
+		pongPlayerUpdate(&p1, &input, window_size);
+		pongPlayerUpdate(&p2, &input, window_size);
+
+		glm_ortho(0.0f, window_size[0], 0.0f, window_size[1], -1.0f, 1.0f, matrix_projection);
+		glViewport(0, 0, window_size[0], window_size[1]);
+
 		glClear(GL_COLOR_BUFFER_BIT);
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
 		pongRendererPrepare(&renderer);
 
-		pongRectRender(&renderer, p1, (vec4) { 0.8f, 0.8f, 0.8f, 1.0f });
-		pongRectRender(&renderer, p2, (vec4) { 0.8f, 0.8f, 0.8f, 1.0f });
+		pongRectRender(&renderer, p1.rect, (vec4) { 0.8f, 0.8f, 0.8f, 1.0f });
+		pongRectRender(&renderer, p2.rect, (vec4) { 0.8f, 0.8f, 0.8f, 1.0f });
 		pongRectRender(&renderer, ball, (vec4) { 0.8f, 0.8f, 0.8f, 1.0f });
 
 		glUniformMatrix4fv(
@@ -136,6 +166,22 @@ int main(int argc, const char* argv[]) {
 				case SDL_QUIT: {
 					exit = 1;
 				} break;
+
+				case SDL_KEYDOWN: {
+					input.key_state[event.key.keysym.scancode] = 1;
+				} break;
+
+				case SDL_KEYUP: {
+					input.key_state[event.key.keysym.scancode] = 0;
+				} break;
+
+				case SDL_WINDOWEVENT: {
+					switch(event.window.type) {
+						case SDL_WINDOWEVENT_RESIZED: {
+							SDL_GetWindowSize(window, &window_size[0], &window_size[1]);
+						} break;
+					}
+				}
 			}
 		}
 	}
@@ -242,9 +288,8 @@ int pongRendererDispatch(t_renderer* renderer) {
 
 int pongRendererPushVertexData(t_renderer* renderer, GLfloat* vertex_data, GLuint vertex_data_size) {
     for(int i = 0; i < vertex_data_size; i++) {
-        if(renderer->vertex_data_count + 1 >= renderer->vertex_data_max) {
+        if(renderer->vertex_data_count + 1 >= renderer->vertex_data_max)
             return 0;
-        }
 
         renderer->vertex_data[renderer->vertex_data_count++] = vertex_data[i];
     }
@@ -256,15 +301,13 @@ int pongRendererPushIndexData(t_renderer* renderer, GLuint* index_data, GLuint i
     const GLint base = renderer->indicy_largest + (renderer->indicy_largest <= 0 ? 0 : 1);
 
     for(int i = 0; i < index_data_size; i++) {
-        if(renderer->index_data_count + 1 >= renderer->index_data_max) {
+        if(renderer->index_data_count + 1 >= renderer->index_data_max)
             return 0;
-        }
 
         renderer->index_data[renderer->index_data_count++] = index_data[i] + base;
 
-        if(renderer->indicy_largest < index_data[i] + base) {
+        if(renderer->indicy_largest < index_data[i] + base)
             renderer->indicy_largest = index_data[i] + base;
-        }
     }
 
     return 1;
@@ -284,8 +327,10 @@ int pongRendererUnload(t_renderer* renderer) {
 
 
 int pongRectMove(t_rect* rect, ivec2 position) {
-	if(!rect)
+	if(!rect) {
+		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
+	}
 
 	glm_ivec2_copy(position, rect->position);
 
@@ -293,17 +338,35 @@ int pongRectMove(t_rect* rect, ivec2 position) {
 }
 
 int pongRectResize(t_rect* rect, ivec2 size) {
-	if(!rect)
+	if(!rect) {
+		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
+	}
 
 	glm_ivec2_copy(size, rect->size);
 
 	return 1;
 }
 
+int pongRectCheckCollision(t_rect a, t_rect b) {
+	int collision_left;
+	int collision_right;
+	int collision_up;
+	int collision_down;
+
+	return collision_left && collision_right && collision_up && collision_down;
+}
+
+int pongRectCheckCollisionBound(t_rect a, ivec2 bound) {
+	return 	(a.position[0] <= 0 || a.position[0] + a.size[1] >= bound[0]) ||
+			(a.position[1] <= 0 || a.position[1] + a.size[1] >= bound[1]);
+}
+
 int pongRectRender(t_renderer* renderer, t_rect rect, vec4 color) {
-	if(!renderer)
+	if(!renderer) {
+		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
+	}
 
 	GLfloat quad_vert[] = {
 		rect.position[0], rect.position[1], 									color[0], color[1], color[2], color[3],		0.0f, 0.0f,		0.0f,
@@ -324,4 +387,67 @@ int pongRectRender(t_renderer* renderer, t_rect rect, vec4 color) {
 		return 0;
 
 	return 1;
+}
+
+int pongInputKeyDown(t_input* input, SDL_Scancode scancode) {
+	if(!input) {
+		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
+		return 0;
+	}
+
+	return input->key_state[scancode] == 1;
+}
+
+int pongInputKeyUp(t_input* input, SDL_Scancode scancode) {
+	if(!input) {
+		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
+		return 0;
+	}
+
+	return input->key_state[scancode] == 0;
+}
+
+
+t_player pongPlayerInit(t_player_pos ppos, ivec2 bounds) {
+	t_player result = { 0 };
+
+	glm_ivec2((ivec2) { 16, 128 }, result.rect.size);
+	switch(ppos) {
+		case POSITION_LEFT: {
+			result.rect.position[0] = 16;
+			result.rect.position[1] = bounds[1] / 2 + result.rect.size[1] / 2;
+		} break;
+		case POSITION_RIGHT: {
+			result.rect.position[0] = bounds[0] - 16 - result.rect.size[0];
+			result.rect.position[1] = bounds[1] / 2 + result.rect.size[1] / 2;
+		} break;
+	}
+
+	result.score = 0;
+
+	return result;
+}
+
+int pongPlayerUpdate(t_player* player, t_input* input, ivec2 bounds) {
+	if(!player) {
+		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
+		return 0;
+	}
+
+	player->rect.position[1] += (pongInputKeyDown(input, SDL_SCANCODE_W) - pongInputKeyDown(input, SDL_SCANCODE_S)) * 8.0f;
+	if(pongRectCheckCollisionBound(player->rect, bounds)) {
+		if(player->rect.position[1] <= 0)
+			player->rect.position[1] = 0;
+		if(player->rect.position[1] + player->rect.size[1] >= bounds[1])
+			player->rect.position[1] = bounds[1] - player->rect.size[1];
+	}
+}
+
+int pongPlayerIncrementScore(t_player* player) {
+	if(!player) {
+		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
+		return 0;
+	}
+
+	player->score++;
 }
