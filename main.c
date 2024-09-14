@@ -100,85 +100,87 @@ typedef enum {
 
 /* SECTION: Functions - t_window */
 
-t_window pongWindowOpen(int w, int h, const char* title);
-int pongWindowPollEvents(t_window* window, t_input* input);
-int pongWindowDispatch(t_window* window);
-int pongWindowClose(t_window* window);
+t_window ft_window(int w, int h, const char* title);
+int ft_window_poll_events(t_window* window, t_input* input);
+int ft_window_dispatch(t_window* window);
+int ft_window_close(t_window* window);
 
 /* SECTION: Functions - t_renderer */
 
-t_renderer pongRendererLoad(void);
-int pongRendererPrepare(t_renderer* renderer, t_window* window);
-int pongRendererDispatch(t_renderer* renderer);
-int pongRendererPushVertexData(t_renderer* renderer, GLfloat* vertex_data, GLuint vertex_data_size);
-int pongRendererPushIndexData(t_renderer* renderer, GLuint* index_data, GLuint index_data_size);
-int pongRendererUnload(t_renderer* renderer);
+t_renderer ft_renderer(void);
+int ft_renderer_begin(t_renderer* renderer, t_window* window);
+int ft_renderer_dispatch(t_renderer* renderer);
+int ft_renderer_push_vertices(t_renderer* renderer, GLfloat* vertex_data, GLuint vertex_data_size);
+int ft_renderer_push_indices(t_renderer* renderer, GLuint* index_data, GLuint index_data_size);
+int ft_renderer_unload(t_renderer* renderer);
 
 /* SECTION: Functions - t_rect */
 
-int pongRectMove(t_rect* rect, ivec2 position);
-int pongRectResize(t_rect* rect, ivec2 size);
+int ft_rect_move(t_rect* rect, ivec2 position);
+int ft_move_size(t_rect* rect, ivec2 size);
 
-int pongRectCheckCollisionLeftRight(t_rect a, t_rect b);
-int pongRectCheckCollisionTopBottom(t_rect a, t_rect b);
-int pongRectCheckCollision(t_rect a, t_rect b);
-int pongRectCheckCollisionBound(t_rect a, ivec2 bound);
+int ft_collision_left_right(t_rect a, t_rect b);
+int ft_collision_top_bottom(t_rect a, t_rect b);
+int ft_collision(t_rect a, t_rect b);
+int ft_collision_boundaries(t_rect a, ivec2 bound);
 
-int pongRectRender(t_renderer* renderer, t_rect rect, vec4 color);
+int ft_draw_rect(t_renderer* renderer, t_rect rect, vec4 color);
 
 /* SECTION: Functions - t_input */
 
-int pongInputKeyDown(t_input* input, SDL_Scancode scancode);
-int pongInputKeyUp(t_input* input, SDL_Scancode scancode);
-int pongInputKeyPress(t_input* input, SDL_Scancode scancode);
-int pongInputKeyRelease(t_input* input, SDL_Scancode scancode);
+int ft_input_keydown(t_input* input, SDL_Scancode scancode);
+int ft_input_keyup(t_input* input, SDL_Scancode scancode);
+int ft_input_keypress(t_input* input, SDL_Scancode scancode);
+int ft_input_keyrelease(t_input* input, SDL_Scancode scancode);
 
 /* SECTION: Functions - t_player */
 
-t_player pongPlayerInit(t_player_pos ppos, ivec2 bounds);
-int pongPlayerUpdate(t_player* player, t_input* input, ivec2 bounds);
-int pongPlayerIncrementScore(t_player* player);
+t_player ft_player(t_player_pos ppos, ivec2 bounds);
+int ft_player_update(t_player* player, t_input* input, ivec2 bounds);
+int ft_plyaer_incremenet_score(t_player* player);
 
 /* SECTION: Functions - t_ball */
 
-t_ball pongBallInit(ivec2 bounds);
-int pongBallRestart(t_ball* ball, ivec2 bounds);
-int pongBallRandomDirection(t_ball* ball);
-int pongBallUpdate(t_ball* ball, t_player* p1, t_player* p2, ivec2 bounds);
-int pongBallOutOfBounds(t_ball* ball, ivec2 bounds);
+t_ball ft_ball(ivec2 bounds);
+int ft_ball_restart(t_ball* ball, ivec2 bounds);
+int ft_ball_randomize_direction(t_ball* ball);
+int ft_ball_update(t_ball* ball, t_player* p1, t_player* p2, ivec2 bounds);
+int ft_ball_out_of_bounds(t_ball* ball, ivec2 bounds);
 
 int main(int argc, const char* argv[]) {
-	t_window window = pongWindowOpen(1024, 768, "OpenGL 330 | SDL 2.30.7 | Pong 1.0f");
-	t_renderer renderer = pongRendererLoad();
+	t_window window = ft_window(1024, 768, "OpenGL 330 | SDL 2.30.7 | Pong 1.0f");
+	t_renderer renderer = ft_renderer();
 	t_input input = { 0 };
 
-	t_player p1 = pongPlayerInit(POSITION_LEFT, window.size);
-	t_player p2 = pongPlayerInit(POSITION_RIGHT, window.size);
-	t_ball ball = pongBallInit(window.size);
+	t_player p1 = ft_player(POSITION_LEFT, window.size);
+	t_player p2 = ft_player(POSITION_RIGHT, window.size);
+	t_ball ball = ft_ball(window.size);
 
 	t_state_machine state_machine = STATE_BEGIN;
 
 	while(!window.exit) {
 		switch(state_machine) {
 			case STATE_BEGIN: {
-				if(pongInputKeyRelease(&input, SDL_SCANCODE_SPACE)) {
-					pongBallRandomDirection(&ball);
+				if(ft_input_keyrelease(&input, SDL_SCANCODE_SPACE)) {
+					ft_ball_randomize_direction(&ball);
 
 					state_machine = STATE_GAMEPLAY;
 				}
 			} break;
 
 			case STATE_GAMEPLAY: {
-				pongBallUpdate(&ball, &p1, &p2, window.size);
+				ft_ball_update(&ball, &p1, &p2, window.size);
 
-				if(pongBallOutOfBounds(&ball, window.size)) {
+				if(ft_ball_out_of_bounds(&ball, window.size)) {
 					state_machine = STATE_OVER;
 				}
 			} break;
 
 			case STATE_OVER: {
-				if(pongInputKeyRelease(&input, SDL_SCANCODE_R)) {
-					pongBallRestart(&ball, window.size);
+				if(ft_input_keyrelease(&input, SDL_SCANCODE_R)) {
+					ball = ft_ball(window.size);
+					p1 = ft_player(POSITION_LEFT, window.size);
+					p2 = ft_player(POSITION_RIGHT, window.size);
 
 					state_machine = STATE_BEGIN;
 				}
@@ -188,32 +190,32 @@ int main(int argc, const char* argv[]) {
 			default: { } break;
 		}
 
-		pongPlayerUpdate(&p1, &input, window.size);
-		pongPlayerUpdate(&p2, &input, window.size);
+		ft_player_update(&p1, &input, window.size);
+		ft_player_update(&p2, &input, window.size);
 
 		glClear(GL_COLOR_BUFFER_BIT);
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
-		pongRendererPrepare(&renderer, &window);
+		ft_renderer_begin(&renderer, &window);
 
-		pongRectRender(&renderer, p1.rect, (vec4) { 0.8f, 0.8f, 0.8f, 1.0f });
-		pongRectRender(&renderer, p2.rect, (vec4) { 0.8f, 0.8f, 0.8f, 1.0f });
-		pongRectRender(&renderer, ball.rect, (vec4) { 0.8f, 0.8f, 0.8f, 1.0f });
+		ft_draw_rect(&renderer, p1.rect, (vec4) { 0.8f, 0.8f, 0.8f, 1.0f });
+		ft_draw_rect(&renderer, p2.rect, (vec4) { 0.8f, 0.8f, 0.8f, 1.0f });
+		ft_draw_rect(&renderer, ball.rect, (vec4) { 0.8f, 0.8f, 0.8f, 1.0f });
 
-		pongRendererDispatch(&renderer);
-		pongWindowDispatch(&window);
-		pongWindowPollEvents(&window, &input);
+		ft_renderer_dispatch(&renderer);
+		ft_window_dispatch(&window);
+		ft_window_poll_events(&window, &input);
 	}
 
-	pongRendererUnload(&renderer);
-	pongWindowClose(&window);
+	ft_renderer_unload(&renderer);
+	ft_window_close(&window);
 
 	return 0;
 }
 
 /* SECTION: Functions - t_window */
 
-t_window pongWindowOpen(int w, int h, const char* title) {
+t_window ft_window(int w, int h, const char* title) {
 	if(SDL_Init(SDL_INIT_EVERYTHING) != 0) {
 		return (t_window) { 0 };
 	}
@@ -245,7 +247,7 @@ t_window pongWindowOpen(int w, int h, const char* title) {
 	return res;
 }
 
-int pongWindowPollEvents(t_window* window, t_input* input) {
+int ft_window_poll_events(t_window* window, t_input* input) {
 	if(!window || !input) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
@@ -282,7 +284,7 @@ int pongWindowPollEvents(t_window* window, t_input* input) {
 	return 1;
 }
 
-int pongWindowDispatch(t_window* window) {
+int ft_window_dispatch(t_window* window) {
 	if(!window) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
@@ -293,7 +295,7 @@ int pongWindowDispatch(t_window* window) {
 	return 1;
 }
 
-int pongWindowClose(t_window* window) {
+int ft_window_close(t_window* window) {
 	if(!window) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
@@ -309,7 +311,7 @@ int pongWindowClose(t_window* window) {
 
 /* SECTION: Functions - t_renderer */
 
-t_renderer pongRendererLoad(void) {
+t_renderer ft_renderer(void) {
 	t_renderer result = { 0 };
 
 	result.vertex_data_count = 	0;
@@ -357,7 +359,7 @@ t_renderer pongRendererLoad(void) {
 	return result;
 }
 
-int pongRendererPrepare(t_renderer* renderer, t_window* window) {
+int ft_renderer_begin(t_renderer* renderer, t_window* window) {
 	if(!renderer) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
@@ -381,7 +383,7 @@ int pongRendererPrepare(t_renderer* renderer, t_window* window) {
 	return 1;
 }
 
-int pongRendererDispatch(t_renderer* renderer) {
+int ft_renderer_dispatch(t_renderer* renderer) {
 	if(!renderer) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
@@ -419,7 +421,7 @@ int pongRendererDispatch(t_renderer* renderer) {
 	return 1;
 }
 
-int pongRendererPushVertexData(t_renderer* renderer, GLfloat* vertex_data, GLuint vertex_data_size) {
+int ft_renderer_push_vertices(t_renderer* renderer, GLfloat* vertex_data, GLuint vertex_data_size) {
 	if(!renderer) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
@@ -435,7 +437,7 @@ int pongRendererPushVertexData(t_renderer* renderer, GLfloat* vertex_data, GLuin
     return 1;
 }
 
-int pongRendererPushIndexData(t_renderer* renderer, GLuint* index_data, GLuint index_data_size) {
+int ft_renderer_push_indices(t_renderer* renderer, GLuint* index_data, GLuint index_data_size) {
 	if(!renderer) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
@@ -456,7 +458,7 @@ int pongRendererPushIndexData(t_renderer* renderer, GLuint* index_data, GLuint i
     return 1;
 }
 
-int pongRendererUnload(t_renderer* renderer) {
+int ft_renderer_unload(t_renderer* renderer) {
 	if(!renderer) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
@@ -475,7 +477,7 @@ int pongRendererUnload(t_renderer* renderer) {
 
 /* SECTION: Functions - t_rect */
 
-int pongRectMove(t_rect* rect, ivec2 position) {
+int ft_rect_move(t_rect* rect, ivec2 position) {
 	if(!rect) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
@@ -486,7 +488,7 @@ int pongRectMove(t_rect* rect, ivec2 position) {
 	return 1;
 }
 
-int pongRectResize(t_rect* rect, ivec2 size) {
+int ft_move_size(t_rect* rect, ivec2 size) {
 	if(!rect) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
@@ -497,27 +499,27 @@ int pongRectResize(t_rect* rect, ivec2 size) {
 	return 1;
 }
 
-int pongRectCheckCollisionLeftRight(t_rect a, t_rect b) {
+int ft_collision_left_right(t_rect a, t_rect b) {
 	return 	(a.position[0] < b.position[0] + b.size[0]) &&
 			(a.position[0] + a.size[0] > b.position[0]);
 }
 
-int pongRectCheckCollisionTopBottom(t_rect a, t_rect b) {
+int ft_collision_top_bottom(t_rect a, t_rect b) {
 	return	(a.position[1] < b.position[1] + b.size[1]) &&
 			(a.position[1] + a.size[1] > b.position[1]);
 }
 
-int pongRectCheckCollision(t_rect a, t_rect b) {
-	return 	pongRectCheckCollisionLeftRight(a, b) &&
-			pongRectCheckCollisionTopBottom(a, b);
+int ft_collision(t_rect a, t_rect b) {
+	return 	ft_collision_left_right(a, b) &&
+			ft_collision_top_bottom(a, b);
 }
 
-int pongRectCheckCollisionBound(t_rect a, ivec2 bound) {
+int ft_collision_boundaries(t_rect a, ivec2 bound) {
 	return 	(a.position[0] <= 0 || a.position[0] + a.size[1] >= bound[0]) ||
 			(a.position[1] <= 0 || a.position[1] + a.size[1] >= bound[1]);
 }
 
-int pongRectRender(t_renderer* renderer, t_rect rect, vec4 color) {
+int ft_draw_rect(t_renderer* renderer, t_rect rect, vec4 color) {
 	if(!renderer) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
@@ -535,10 +537,10 @@ int pongRectRender(t_renderer* renderer, t_rect rect, vec4 color) {
 		1, 2, 3
 	};
 
-	if(!pongRendererPushVertexData(renderer, quad_vert, sizeof(quad_vert) / sizeof(GLfloat)))
+	if(!ft_renderer_push_vertices(renderer, quad_vert, sizeof(quad_vert) / sizeof(GLfloat)))
 		return 0;
 
-	if(!pongRendererPushIndexData(renderer, quad_index, sizeof(quad_index) / sizeof(GLuint)))
+	if(!ft_renderer_push_indices(renderer, quad_index, sizeof(quad_index) / sizeof(GLuint)))
 		return 0;
 
 	return 1;
@@ -546,7 +548,7 @@ int pongRectRender(t_renderer* renderer, t_rect rect, vec4 color) {
 
 /* SECTION: Functions - t_input */
 
-int pongInputKeyDown(t_input* input, SDL_Scancode scancode) {
+int ft_input_keydown(t_input* input, SDL_Scancode scancode) {
 	if(!input) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
@@ -555,7 +557,7 @@ int pongInputKeyDown(t_input* input, SDL_Scancode scancode) {
 	return input->key_state[scancode] == 1;
 }
 
-int pongInputKeyUp(t_input* input, SDL_Scancode scancode) {
+int ft_input_keyup(t_input* input, SDL_Scancode scancode) {
 	if(!input) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
@@ -564,7 +566,7 @@ int pongInputKeyUp(t_input* input, SDL_Scancode scancode) {
 	return input->key_state[scancode] == 0;
 }
 
-int pongInputKeyPress(t_input* input, SDL_Scancode scancode) {
+int ft_input_keypress(t_input* input, SDL_Scancode scancode) {
 	if(!input) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
@@ -573,7 +575,7 @@ int pongInputKeyPress(t_input* input, SDL_Scancode scancode) {
 	return input->key_state[scancode] == 1 && input->key_state_previous[scancode] == 0;
 }
 
-int pongInputKeyRelease(t_input* input, SDL_Scancode scancode) {
+int ft_input_keyrelease(t_input* input, SDL_Scancode scancode) {
 	if(!input) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
@@ -584,20 +586,20 @@ int pongInputKeyRelease(t_input* input, SDL_Scancode scancode) {
 
 /* SECTION: Functions - t_player */
 
-t_player pongPlayerInit(t_player_pos ppos, ivec2 bounds) {
+t_player ft_player(t_player_pos ppos, ivec2 bounds) {
 	t_player result = { 0 };
 
 	glm_ivec2((ivec2) { 16, 128 }, result.rect.size);
 	switch(ppos) {
 		case POSITION_LEFT: {
 			result.rect.position[0] = 16;
-			result.rect.position[1] = bounds[1] / 2 + result.rect.size[1] / 2;
+			result.rect.position[1] = bounds[1] / 2 - result.rect.size[1] / 2;
 			result.key_up = SDL_SCANCODE_W;
 			result.key_down = SDL_SCANCODE_S;
 		} break;
 		case POSITION_RIGHT: {
 			result.rect.position[0] = bounds[0] - 16 - result.rect.size[0];
-			result.rect.position[1] = bounds[1] / 2 + result.rect.size[1] / 2;
+			result.rect.position[1] = bounds[1] / 2 - result.rect.size[1] / 2;
 			result.key_up = SDL_SCANCODE_UP;
 			result.key_down = SDL_SCANCODE_DOWN;
 		} break;
@@ -608,14 +610,14 @@ t_player pongPlayerInit(t_player_pos ppos, ivec2 bounds) {
 	return result;
 }
 
-int pongPlayerUpdate(t_player* player, t_input* input, ivec2 bounds) {
+int ft_player_update(t_player* player, t_input* input, ivec2 bounds) {
 	if(!player) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
 	}
 
-	player->rect.position[1] += (pongInputKeyDown(input, player->key_up) - pongInputKeyDown(input, player->key_down)) * 10;
-	if(pongRectCheckCollisionBound(player->rect, bounds)) {
+	player->rect.position[1] += (ft_input_keydown(input, player->key_up) - ft_input_keydown(input, player->key_down)) * 10;
+	if(ft_collision_boundaries(player->rect, bounds)) {
 		if(player->rect.position[1] <= 0)
 			player->rect.position[1] = 0;
 		if(player->rect.position[1] + player->rect.size[1] >= bounds[1])
@@ -625,7 +627,7 @@ int pongPlayerUpdate(t_player* player, t_input* input, ivec2 bounds) {
 	return 1;
 }
 
-int pongPlayerIncrementScore(t_player* player) {
+int ft_plyaer_incremenet_score(t_player* player) {
 	if(!player) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
@@ -638,7 +640,7 @@ int pongPlayerIncrementScore(t_player* player) {
 
 /* SECTION: Functions - t_ball */
 
-t_ball pongBallInit(ivec2 bounds) {
+t_ball ft_ball(ivec2 bounds) {
 	t_ball res;
 	glm_ivec2((ivec2) { 16, 16 }, res.rect.size);
 	glm_ivec2((ivec2) { bounds[0] / 2 - res.rect.size[0] / 2, bounds[1] / 2 - res.rect.size[1] / 2 }, res.rect.position);
@@ -647,7 +649,7 @@ t_ball pongBallInit(ivec2 bounds) {
 	return res;
 }
 
-int pongBallRestart(t_ball* ball, ivec2 bounds) {
+int ft_ball_restart(t_ball* ball, ivec2 bounds) {
 	if(!ball) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
@@ -659,7 +661,7 @@ int pongBallRestart(t_ball* ball, ivec2 bounds) {
 	return 1;
 }
 
-int pongBallRandomDirection(t_ball* ball) {
+int ft_ball_randomize_direction(t_ball* ball) {
 	if(!ball) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
@@ -678,13 +680,13 @@ int pongBallRandomDirection(t_ball* ball) {
 	return 1;
 }
 
-int pongBallUpdate(t_ball* ball, t_player* p1, t_player* p2, ivec2 bounds) {
+int ft_ball_update(t_ball* ball, t_player* p1, t_player* p2, ivec2 bounds) {
 	if(!ball || !p1 || !p2) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
 	}
 
-	if(pongRectCheckCollisionBound(ball->rect, bounds)) {
+	if(ft_collision_boundaries(ball->rect, bounds)) {
 		if(ball->rect.position[1] <= 0) {
 			ball->rect.position[1] = 0;
 			ball->direction[1] *= -1;
@@ -692,15 +694,15 @@ int pongBallUpdate(t_ball* ball, t_player* p1, t_player* p2, ivec2 bounds) {
 			ball->rect.position[1] = bounds[1] - ball->rect.size[1];
 			ball->direction[1] *= -1;
 		}
-	} else if(pongRectCheckCollision(ball->rect, p1->rect)) {
-		if(pongRectCheckCollisionLeftRight(ball->rect, p1->rect))
+	} else if(ft_collision(ball->rect, p1->rect)) {
+		if(ft_collision_left_right(ball->rect, p1->rect))
 			ball->direction[0] *= -1;
-		else if(pongRectCheckCollisionTopBottom(ball->rect, p1->rect))
+		else if(ft_collision_top_bottom(ball->rect, p1->rect))
 			ball->direction[1] *= -1;
-	} else if(pongRectCheckCollision(ball->rect, p2->rect)) {
-		if(pongRectCheckCollisionLeftRight(ball->rect, p2->rect))
+	} else if(ft_collision(ball->rect, p2->rect)) {
+		if(ft_collision_left_right(ball->rect, p2->rect))
 			ball->direction[0] *= -1;
-		else if(pongRectCheckCollisionTopBottom(ball->rect, p2->rect))
+		else if(ft_collision_top_bottom(ball->rect, p2->rect))
 			ball->direction[1] *= -1;
 	}
 	ball->rect.position[0] += 8 * ball->direction[0];
@@ -709,7 +711,7 @@ int pongBallUpdate(t_ball* ball, t_player* p1, t_player* p2, ivec2 bounds) {
 	return 1;
 }
 
-int pongBallOutOfBounds(t_ball* ball, ivec2 bounds) {
+int ft_ball_out_of_bounds(t_ball* ball, ivec2 bounds) {
 	if(!ball) {
 		fprintf(stderr, "[ERR] %s.%i: %s\n", __FILE_NAME__, __LINE__, strerror(errno));
 		return 0;
